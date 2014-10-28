@@ -44,3 +44,5 @@ print_r($palindrome->printReport());
 // 19:48
 
 // 20:59
+
+// 21:33

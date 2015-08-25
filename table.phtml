@@ -1,0 +1,89 @@
+<?php
+require_once 'create_table_parser.php';
+
+$sql = '
+CREATE TABLE user(
+id   INTEGER PRIMARY KEY AUTOINCREMENT,
+name TEXT NOT NULL DEFAULT (\'qsd\'),
+UNIQUE(id),
+CHECK(id = 123)
+) WITHOUT ROWID
+';
+
+$create_table_parser = new create_table_parser();
+$table = $create_table_parser->parse($sql);
+?>
+
+<form action="alter_table.php" method="post">
+
+<div><?=$table['name'];?></div>
+
+<table>
+  <tr>
+    <td>#</td>
+    <td>Name</td>
+    <td>Type</td>
+    <td>Key</td>
+    <td>Null</td>
+    <td>Default</td>
+  </tr>
+
+  <?php foreach ($table['columns'] as $index => $column): ?>
+    <tr>
+      <td>
+        <input name="column_number[]" type="text" value="<?=$index + 1;?>">
+      </td>
+
+      <td>
+        <input name="column_name[]" type="text" value="<?=$column['name'];?>">
+      </td>
+
+      <td>
+        <select name="column_type[]">
+          <option <?php if($column['type'] == 'BLOB')   :?>selected<?php endif;?> >BLOB</option>
+          <option <?php if($column['type'] == 'INTEGER'):?>selected<?php endif;?> >INTEGER</option>
+          <option <?php if($column['type'] == 'NUMERIC'):?>selected<?php endif;?> >NUMERIC</option>
+          <option <?php if($column['type'] == 'REAL')   :?>selected<?php endif;?> >REAL</option>
+          <option <?php if($column['type'] == 'TEXT')   :?>selected<?php endif;?> >TEXT</option>
+        </select>
+      </td>
+
+      <td>
+        <select name="column_key[]">
+          <option></option>
+          <option <?php if(! empty($column['constraints']['PRIMARY KEY'])):?>selected<?php endif;?> >PRIMARY KEY</option>
+          <option <?php if(! empty($column['constraints']['UNIQUE'])):?>selected<?php endif;?> >UNIQUE</option>
+        </select>
+      </td>
+
+      <td>
+        <select name="column_not_null[]">
+          <option></option>
+          <option <?php if(! empty($column['constraints']['NOT NULL'])):?>selected<?php endif;?> >NOT NULL</option>
+        </select>
+      </td>
+
+      <td>
+        <input name="column_default[]" type="text"
+               <?php if(isset($column['constraints']['DEFAULT'])):?>
+                 value="<?=$column['constraints']['DEFAULT'][0];?>"
+               <?php endif;?>
+        >
+      </td>
+
+    </tr>
+  <?php endforeach;?>
+
+</table>
+
+<input type="submit" value="Submit">
+
+</form>
+
+<pre>
+  <?php print_r($_POST);?>
+</pre>
+
+<pre>
+  <?php print_r($table);?>
+</pre>

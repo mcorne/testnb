@@ -1,13 +1,89 @@
 <?php
 class create_table_parser
 {
+    public $table;
+    public $string;
+
+    public function __toString()
+    {
+        if (! $this->table) {
+            return '';
+        }
+
+        if (! $this->string) {
+            $this->string = $this->convert_table_to_string($this->table);
+        }
+
+        return $this->string;
+    }
+
+    public function convert_column_to_string($column)
+    {
+        $string = "{$column['name']} {$column['type']}";
+
+        if (isset($column['constraints'])) {
+            $string .= ' ' . $this->convert_constraints_to_string($column['constraints']);
+        }
+
+        return $string;
+    }
+
+    public function convert_columns_to_string($columns)
+    {
+        $strings = array_map([$this, 'convert_column_to_string'], $columns);
+        $string = implode("\n", $strings);
+
+        return $string;
+    }
+
+    public function convert_constraints_to_string($constraints, $separator = ' ')
+    {
+        $string = '';
+
+        foreach ($constraints as $name => $definitions) {
+            foreach ($definitions as $definition) {
+                if ($string) {
+                    $string .= $separator;
+                }
+                
+                $string .= $name;
+
+                if ($definition) {
+                    $string .= ' ' . $definition;
+                }
+            }
+        }
+
+        return $string;
+    }
+
+    public function convert_table_to_string($table)
+    {
+        $definition = $this->convert_columns_to_string($table['columns']);
+
+        if (isset($table['constraints'])) {
+            $definition .= "\n" . $this->convert_constraints_to_string($table['constraints'], ",\n");
+        }
+
+        $string = sprintf("CREATE TABLE %s(\n%s\n)", $table['name'], $definition);
+
+        if (isset($table['without_rowid'])) {
+            $string .= ' WITHOUT ROWID';
+        }
+
+        return $string;
+    }
+
     public function parse($sql)
     {
         list($table, $columns_and_constraints_sql) = $this->parse_table($sql);
         list($table['constraints'], $columns_sql) = $this->parse_table_constraints($columns_and_constraints_sql);
         $table['columns'] = $this->parse_columns($columns_sql);
-        return $table;
 
+        $this->table = $table;
+        $this->string = null;
+
+        return $table;
     }
 
     public function parse_column_constraints($constraints)
@@ -62,7 +138,7 @@ class create_table_parser
 
     public function parse_table($sql)
     {
-        if (! preg_match('~^\s*CREATE\s+TABLE\s+["`]?([\w]+)["`]?\s*\((.+?)\)(\s+WITHOUT ROWID)?\s*$~isu', $sql, $match)) {
+        if (! preg_match('~^\s*CREATE\s+TABLE\s+["`]?([\w]+)["`]?\s*\((.+?)\)(\s+WITHOUT\s+ROWID)?\s*$~isu', $sql, $match)) {
             throw new Exception('Syntax error');
         }
 
